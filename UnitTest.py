@@ -12,7 +12,7 @@ def search():
     query=search_query,
     date_range="d",
     desire="news",
-    num_results=10,
+    num_results=3,
     start_num=0,
     unique=True,
   )
