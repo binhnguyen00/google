@@ -3,15 +3,16 @@ import json;
 from GoogleSearch import GoogleSearch, SearchResult;
 
 def search():
-  google = GoogleSearch(lang="vi", region="vn", safe="off", timeout=10)
-  region: str = "hải dương"
-  search_query: str = f"báo mới {region}"
+  google = GoogleSearch(lang="vi", region="vn", timeout=10)
+  region: str = "hải phòng"
+  concern: str = "an toàn giao thông"
+  search_query: str = f"{concern} ở {region}"
   print(f"Search Query: {search_query}")
   results: list[SearchResult] = google.search(
     query=search_query,
     date_range="d",
     desire="news",
-    num_results=2,
+    num_results=10,
     start_num=0,
     unique=True,
   )

@@ -22,12 +22,12 @@ class GoogleSearch():
   def __init__(
     self,
     lang: str = "vi",
-    safe: str = "active",
+    safe: Literal["active", "off"] = "off",
     region: Optional[str] = "vn",
     timeout: int = 5,
     ssl_verify: Optional[bool] = True,
     proxy: Optional[str] = None,
-    sleep_interval: float = 0,
+    sleep_interval: float = 1,
   ) -> None:
     self.lang = lang
     self.safe = safe
@@ -49,7 +49,6 @@ class GoogleSearch():
     start: int,
     qdr: Literal['d', 'w', 'm', 'y'] = 'w',
     tbm: Literal['news', 'images', 'videos', 'shop', 'all'] = 'all',
-    sbd: bool = True,
   ) -> dict:
     """ Build the parameters for the Google search request. """
     tbm_map = {
@@ -60,6 +59,7 @@ class GoogleSearch():
       "all": "all",
     }
     to_be_match = tbm_map.get(tbm, "all")
+    to_be_sort = "sbd:1" if qdr == "d" else f"qdr:{qdr}"
     params = {
       "q"     : query,
       "num"   : num,
@@ -67,8 +67,7 @@ class GoogleSearch():
       "gl"    : self.region,
       "safe"  : self.safe,
       "start" : start,
-      "sbd"   : 1 if sbd else 0,
-      "tbs"   : f"qdr:{qdr}",
+      "tbs"   : to_be_sort,
       "tbm"   : to_be_match,
     }
     if (to_be_match == 'all'): del params["tbm"] # search all
@@ -84,10 +83,10 @@ class GoogleSearch():
       params=params,
       timeout=self.timeout,
       verify=self.ssl_verify,
-      cookies = {
-        'CONSENT': 'PENDING+987', # bypasses the consent page
-        'SOCS': 'CAESHAgBEhIaAB',
-      }
+      # cookies = {
+      #   'CONSENT': 'PENDING+987', # bypasses the consent page
+      #   'SOCS': 'CAESHAgBEhIaAB',
+      # }
     )
     resp.raise_for_status()
     return resp
@@ -98,7 +97,6 @@ class GoogleSearch():
     date_range: Literal['d', 'w', 'm', 'y'] = 'w',
     desire: Literal['news', 'images', 'videos', 'shop', 'all'] = 'all',
     start_num: int = 0,
-    sort_by_date: bool = True,
     unique: bool = False,
   ) -> List[SearchResult]:
     """
@@ -126,7 +124,7 @@ class GoogleSearch():
 
     while fetched < num_results:
       batch: int          = num_results - fetched
-      params: dict        = self._build_params(query=query, num=batch + 2, start=start, qdr=date_range, tbm=desire, sbd=sort_by_date)
+      params: dict        = self._build_params(query=query, num=batch + 2, start=start, qdr=date_range, tbm=desire)
       resp: Response      = self._send_request(params=params)
       soup: BeautifulSoup = BeautifulSoup(resp.text, "html.parser")
       print(soup)
