@@ -1,29 +1,22 @@
 import time;
-import requests
+import requests;
 
-from typing import List, Optional, Set;
+from requests import Response;
+from typing import List, Literal, Optional, Set;
 from urllib.parse import unquote;
-from bs4 import BeautifulSoup;
+from bs4 import BeautifulSoup, Tag;
 from UserAgent import get_useragent;
 
 class SearchResult():
-  """
-  Container for a single search result.
-  """
+  url: str
+  title: str
+  description: str
   def __init__(self, url: str, title: str, description: str) -> None:
     self.url: str = url
     self.title: str = title
     self.description: str = description
 
-  def __repr__(self) -> str:
-    return f"SearchResult(url={self.url}, title={self.title}, description={self.description})"
-
-
 class GoogleSearch():
-  """
-  A simple interface to fetch Google search results.
-  """
-
   BASE_URL = "https://www.google.com/search"
 
   def __init__(
@@ -43,24 +36,45 @@ class GoogleSearch():
     self.ssl_verify = ssl_verify
     self.sleep_interval = sleep_interval
     self.session = requests.Session()
-    if proxy:
-      proxy_dict = {"http": proxy, "https": proxy}
-      self.session.proxies.update(proxy_dict)
+    if (proxy):
+      self.session.proxies.update({ 
+        "http": proxy, 
+        "https": proxy 
+      })
 
-  def _build_params(self, query: str, num: int, start: int, tbs: str) -> dict:
-    params = {
-      "q": query,
-      "num": num,
-      "hl": self.lang,
-      "safe": self.safe,
-      "start": start,
-      "tbs": tbs,
+  def _build_params(
+    self,
+    query: str,
+    num: int,
+    start: int,
+    qdr: Literal['d', 'w', 'm', 'y'] = 'w',
+    tbm: Literal['news', 'images', 'videos', 'shop', 'all'] = 'all',
+    sbd: bool = True,
+  ) -> dict:
+    """ Build the parameters for the Google search request. """
+    tbm_map = {
+      "news": "nws",
+      "images": "isch",
+      "videos": "vid",
+      "shop": "shop",
+      "all": "all",
     }
-    if self.region:
-      params["gl"] = self.region
+    to_be_match = tbm_map.get(tbm, "all")
+    params = {
+      "q"     : query,
+      "num"   : num,
+      "hl"    : self.lang,
+      "gl"    : self.region,
+      "safe"  : self.safe,
+      "start" : start,
+      "sbd"   : 1 if sbd else 0,
+      "tbs"   : f"qdr:{qdr}",
+      "tbm"   : to_be_match,
+    }
+    if (to_be_match == 'all'): del params["tbm"] # search all
     return params
 
-  def _request(self, params: dict) -> requests.Response:
+  def _send_request(self, params: dict) -> Response:
     resp = self.session.get(
       url=self.BASE_URL,
       headers={
@@ -78,22 +92,29 @@ class GoogleSearch():
     resp.raise_for_status()
     return resp
 
-  def search(self, term: str, num_results: int = 10, tbs: str = "qdr:w", start_num: int = 0, unique: bool = False, advanced: bool = False) -> List[SearchResult]:
+  def search(self,
+    query: str,
+    num_results: int = 10,
+    date_range: Literal['d', 'w', 'm', 'y'] = 'w',
+    desire: Literal['news', 'images', 'videos', 'shop', 'all'] = 'all',
+    start_num: int = 0,
+    sort_by_date: bool = True,
+    unique: bool = False,
+  ) -> List[SearchResult]:
     """
     Perform a Google search and return a list of results.
     Example usage:
     searcher = GoogleSearcher(region='US', sleep_interval=1)
-    results = searcher.search("example query", num_results=5, advanced=True)
+    results = searcher.search("example query", num_results=5)
     for r in results:
       print(r)
 
     Args:
-      term: query string
+      query: what to search
       num_results: number of results to return
-      tbs: time filter for results (e.g., 'qdr:w')
+      qdr: query date range for results (e.g., 'd', 'w', 'm', 'y')
       start_num: pagination offset
       unique: enforce unique URLs
-      advanced: if True, include title and description in SearchResult; otherwise only URLs in SearchResult.url
 
     Returns:
       A list of SearchResult objects
@@ -104,12 +125,13 @@ class GoogleSearch():
     start: int = start_num
 
     while fetched < num_results:
-      batch = num_results - fetched
-      params = self._build_params(term, batch + 2, start, tbs)
-      resp = self._request(params=params)
-      soup = BeautifulSoup(resp.text, "html.parser")
-      blocks = soup.select("div.ezO2md")
-      new_found: int = 0
+      batch: int          = num_results - fetched
+      params: dict        = self._build_params(query=query, num=batch + 2, start=start, qdr=date_range, tbm=desire, sbd=sort_by_date)
+      resp: Response      = self._send_request(params=params)
+      soup: BeautifulSoup = BeautifulSoup(resp.text, "html.parser")
+      print(soup)
+      blocks: list[Tag]   = soup.select("div.ezO2md")
+      new_found: int      = 0
 
       for block in blocks:
         link_tag = block.find("a", href=True)
@@ -126,8 +148,8 @@ class GoogleSearch():
           continue
 
         seen.add(url)
-        title = title_tag.get_text(strip=True) if advanced else ""
-        description = desc_tag.get_text(strip=True) if advanced else ""
+        title = title_tag.get_text(strip=True) or ""
+        description = desc_tag.get_text(strip=True) or ""
 
         results.append(SearchResult(url, title, description))
         fetched += 1

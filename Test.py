@@ -5,15 +5,15 @@ from GoogleSearch import GoogleSearch, SearchResult;
 def search():
   google = GoogleSearch(lang="vi", region="vn", safe="off", timeout=10)
   region: str = "hải dương"
-  term: str = f"báo mới {region}"
-  print(f"Term: {term}")
+  search_query: str = f"báo mới {region}"
+  print(f"Search Query: {search_query}")
   results: list[SearchResult] = google.search(
-    term=term,
-    tbs="qdr:d",
-    advanced=True,
-    num_results=10,
-    unique=True,
+    query=search_query,
+    date_range="d",
+    desire="news",
+    num_results=2,
     start_num=0,
+    unique=True,
   )
   for result in results:
     print(json.dumps(result.__dict__, indent=2, ensure_ascii=False))
