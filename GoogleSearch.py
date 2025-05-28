@@ -1,7 +1,6 @@
 import time;
 import json;
 import requests;
-import spacy;
 
 from requests import Response;
 from typing import List, Literal, Optional, Set;
@@ -107,25 +106,6 @@ class GoogleSearch():
     resp.raise_for_status()
     return resp
 
-  def _filter(self, query: str, results: List[SearchResult], threshold: float = 0.7) -> List[SearchResult]:
-    """ use pre-trained model to filter out irrelevant results """
-    if (not results):
-      return []
-
-    nlp = spacy.load("xx_core_web_sm")  # multilingual model
-    query_doc = nlp(query)
-    matching = []
-
-    for result in results:
-      text = f"{result.title} {result.description}"
-      text_doc = nlp(text)
-      similarity = query_doc.similarity(text_doc)
-      if similarity > threshold:
-        matching.append(result)
-    
-    filtered: List[SearchResult] = []
-    return filtered
-
   def search(self,
     query: str,
     num_results: int = 10,
@@ -198,7 +178,4 @@ class GoogleSearch():
       if self.sleep_interval > 0:
         time.sleep(self.sleep_interval)
 
-    print(json.dumps([result.data() for result in results], indent=2, ensure_ascii=False))
-    filtered = self._filter(query=query, results=results)
-    print(json.dumps([result.data() for result in filtered], indent=2, ensure_ascii=False))
-    return filtered
+    return results
