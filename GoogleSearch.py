@@ -1,11 +1,13 @@
 import time;
 import requests;
+import numpy as np;
 
 from requests import Response;
 from typing import List, Literal, Optional, Set;
 from urllib.parse import unquote;
 from bs4 import BeautifulSoup, Tag;
-from sentence_transformers import SentenceTransformer, util;
+from sklearn.feature_extraction.text import TfidfVectorizer;
+from sklearn.metrics.pairwise import cosine_similarity;
 
 from .UserAgent import get_useragent;
 
@@ -18,6 +20,7 @@ class SearchResult():
   url: str
   title: str
   description: str
+  relevance_score: float
   def __init__(self, url: str, title: str, description: str) -> None:
     self.url: str = url
     self.title: str = title
@@ -98,19 +101,29 @@ class GoogleSearch():
     resp.raise_for_status()
     return resp
 
-  def _filter(self, query: str, results: List[SearchResult]) -> List[SearchResult]:
+  def _filter(self, query: str, results: List[SearchResult], threshold: float = 0.15) -> List[SearchResult]:
     """ use pre-trained model to filter out irrelevant results """
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    query_embedding = model.encode(query, convert_to_tensor=True)
-    for idx, result in enumerate(results):
-      text: str = f"{result.title} {result.description}"
-      text_embedding = model.encode(text, convert_to_tensor=True)
-      threshold: float = 0.3
-      similarity: float = util.pytorch_cos_sim(query_embedding, text_embedding).item()
-      if (similarity < threshold):
-        results.pop(idx)
+    if (not results):
+      return []
 
-    return results
+    # combine query with results for vectorization
+    all_texts = [query] + [result.title + ' ' + result.description for result in results]
+
+    # create TF-IDF vectors
+    vectorizer = TfidfVectorizer(stop_words=None, lowercase=True)
+    tfidf_matrix = vectorizer.fit_transform(all_texts)
+
+    # calculate similarities
+    query_vector = tfidf_matrix[0]
+    result_vectors = tfidf_matrix[1:]
+    similarities = cosine_similarity(query_vector, result_vectors).flatten()
+
+    filtered: List[SearchResult] = []
+    for (result, similarity) in zip(results, similarities):
+      if (similarity > threshold):
+        filtered.append(result)
+    
+    return filtered
 
   def search(self,
     query: str,
