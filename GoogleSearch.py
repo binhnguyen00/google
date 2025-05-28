@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup, Tag;
 from .UserAgent import get_useragent;
 
 class SearchResult():
+  """ Google search result
+    url: str
+    title: str
+    description: str
+  """
   url: str
   title: str
   description: str
