@@ -105,7 +105,7 @@ class GoogleSearch():
     for idx, result in enumerate(results):
       text: str = f"{result.title} {result.description}"
       text_embedding = model.encode(text, convert_to_tensor=True)
-      threshold: float = 0.5
+      threshold: float = 0.3
       similarity: float = util.pytorch_cos_sim(query_embedding, text_embedding).item()
       if (similarity < threshold):
         results.pop(idx)
