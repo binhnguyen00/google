@@ -1,10 +1,11 @@
 import time;
-import requests
+import requests;
 
 from typing import List, Optional, Set;
 from urllib.parse import unquote;
 from bs4 import BeautifulSoup;
-from UserAgent import get_useragent;
+
+from .UserAgent import get_useragent;
 
 class SearchResult():
   """
