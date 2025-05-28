@@ -98,7 +98,7 @@ class GoogleSearch():
     date_range: Literal['d', 'w', 'm', 'y'] = 'w',
     desire: Literal['news', 'images', 'videos', 'shop', 'all'] = 'all',
     start_num: int = 0,
-    unique: bool = False,
+    unique: bool = True,
   ) -> List[SearchResult]:
     """
     Perform a Google search and return a list of results.
