@@ -1,13 +1,12 @@
 import time;
+import json;
 import requests;
-import numpy as np;
+import spacy;
 
 from requests import Response;
 from typing import List, Literal, Optional, Set;
 from urllib.parse import unquote;
 from bs4 import BeautifulSoup, Tag;
-from sklearn.feature_extraction.text import TfidfVectorizer;
-from sklearn.metrics.pairwise import cosine_similarity;
 
 from .UserAgent import get_useragent;
 
@@ -20,11 +19,18 @@ class SearchResult():
   url: str
   title: str
   description: str
-  relevance_score: float
+  
   def __init__(self, url: str, title: str, description: str) -> None:
     self.url: str = url
     self.title: str = title
     self.description: str = description
+
+  def data(self) -> dict:
+    return {
+      "url": self.url,
+      "title": self.title,
+      "description": self.description,
+    }
 
 class GoogleSearch():
   BASE_URL = "https://www.google.com/search"
@@ -101,28 +107,23 @@ class GoogleSearch():
     resp.raise_for_status()
     return resp
 
-  def _filter(self, query: str, results: List[SearchResult], threshold: float = 0.15) -> List[SearchResult]:
+  def _filter(self, query: str, results: List[SearchResult], threshold: float = 0.7) -> List[SearchResult]:
     """ use pre-trained model to filter out irrelevant results """
     if (not results):
       return []
 
-    # combine query with results for vectorization
-    all_texts = [query] + [result.title + ' ' + result.description for result in results]
+    nlp = spacy.load("xx_core_web_sm")  # multilingual model
+    query_doc = nlp(query)
+    matching = []
 
-    # create TF-IDF vectors
-    vectorizer = TfidfVectorizer(stop_words=None, lowercase=True)
-    tfidf_matrix = vectorizer.fit_transform(all_texts)
-
-    # calculate similarities
-    query_vector = tfidf_matrix[0]
-    result_vectors = tfidf_matrix[1:]
-    similarities = cosine_similarity(query_vector, result_vectors).flatten()
-
-    filtered: List[SearchResult] = []
-    for (result, similarity) in zip(results, similarities):
-      if (similarity > threshold):
-        filtered.append(result)
+    for result in results:
+      text = f"{result.title} {result.description}"
+      text_doc = nlp(text)
+      similarity = query_doc.similarity(text_doc)
+      if similarity > threshold:
+        matching.append(result)
     
+    filtered: List[SearchResult] = []
     return filtered
 
   def search(self,
@@ -197,5 +198,7 @@ class GoogleSearch():
       if self.sleep_interval > 0:
         time.sleep(self.sleep_interval)
 
-    results = self._filter(query=query, results=results)
-    return results
+    print(json.dumps([result.data() for result in results], indent=2, ensure_ascii=False))
+    filtered = self._filter(query=query, results=results)
+    print(json.dumps([result.data() for result in filtered], indent=2, ensure_ascii=False))
+    return filtered
