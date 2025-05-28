@@ -5,7 +5,8 @@ from requests import Response;
 from typing import List, Literal, Optional, Set;
 from urllib.parse import unquote;
 from bs4 import BeautifulSoup, Tag;
-from UserAgent import get_useragent;
+
+from .UserAgent import get_useragent;
 
 class SearchResult():
   url: str
@@ -102,17 +103,18 @@ class GoogleSearch():
     """
     Perform a Google search and return a list of results.
     Example usage:
-    searcher = GoogleSearcher(region='US', sleep_interval=1)
+    searcher = GoogleSearch(region='US', sleep_interval=1)
     results = searcher.search("example query", num_results=5)
     for r in results:
       print(r)
 
     Args:
-      query: what to search
-      num_results: number of results to return
-      qdr: query date range for results (e.g., 'd', 'w', 'm', 'y')
-      start_num: pagination offset
-      unique: enforce unique URLs
+      query       : what to search
+      num_results : number of results to return
+      date_range  : query date range for results (e.g., 'd', 'w', 'm', 'y')
+      start_num   : pagination offset
+      unique      : enforce unique URLs
+      desire      : type of results
 
     Returns:
       A list of SearchResult objects
@@ -122,7 +124,7 @@ class GoogleSearch():
     seen: Set[str] = set()
     start: int = start_num
 
-    while fetched < num_results:
+    while (fetched < num_results):
       batch: int          = num_results - fetched
       params: dict        = self._build_params(query=query, num=batch + 2, start=start, qdr=date_range, tbm=desire)
       resp: Response      = self._send_request(params=params)
