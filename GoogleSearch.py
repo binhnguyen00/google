@@ -5,6 +5,7 @@ from requests import Response;
 from typing import List, Literal, Optional, Set;
 from urllib.parse import unquote;
 from bs4 import BeautifulSoup, Tag;
+from sentence_transformers import SentenceTransformer, util;
 
 from .UserAgent import get_useragent;
 
@@ -97,6 +98,20 @@ class GoogleSearch():
     resp.raise_for_status()
     return resp
 
+  def _filter(self, query: str, results: List[SearchResult]) -> List[SearchResult]:
+    """ use pre-trained model to filter out irrelevant results """
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    query_embedding = model.encode(query, convert_to_tensor=True)
+    for idx, result in enumerate(results):
+      text: str = f"{result.title} {result.description}"
+      text_embedding = model.encode(text, convert_to_tensor=True)
+      threshold: float = 0.5
+      similarity: float = util.pytorch_cos_sim(query_embedding, text_embedding).item()
+      if (similarity < threshold):
+        results.pop(idx)
+
+    return results
+
   def search(self,
     query: str,
     num_results: int = 10,
@@ -169,4 +184,5 @@ class GoogleSearch():
       if self.sleep_interval > 0:
         time.sleep(self.sleep_interval)
 
+    results = self._filter(query=query, results=results)
     return results
