@@ -1,6 +1,6 @@
 import json;
 
-from GoogleSearch import GoogleSearch, SearchResult;
+from .GoogleSearch import GoogleSearch, SearchResult;
 
 def search():
   google = GoogleSearch(lang="vi", region="vn", timeout=10)

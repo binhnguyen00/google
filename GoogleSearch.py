@@ -134,7 +134,6 @@ class GoogleSearch():
       params: dict        = self._build_params(query=query, num=batch + 2, start=start, qdr=date_range, tbm=desire)
       resp: Response      = self._send_request(params=params)
       soup: BeautifulSoup = BeautifulSoup(resp.text, "html.parser")
-      print(soup)
       blocks: list[Tag]   = soup.select("div.ezO2md")
       new_found: int      = 0
 
